@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>題目詳解</title>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f6f8; color: #333; margin: 0; }
+        .container { background: #fff; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { color: #8E24AA; margin-top: 0; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; display: flex; align-items: center; }
+        h2::before { content: "📝"; margin-right: 8px; font-size: 22px; }
+        p { font-size: 16px; line-height: 1.8; white-space: pre-wrap; color: #444; }
+        .btn { display: block; width: 100%; padding: 14px; background-color: #1DB446; color: white; text-align: center; border-radius: 10px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(29, 180, 70, 0.3); }
+        .btn:active { background-color: #179b3b; transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 id="qIdTitle">載入中...</h2>
+        <p id="explanationText">正在讀取詳解內容...</p>
+    </div>
+    <button class="btn" onclick="closeLiff()">✅ 了解！關閉視窗</button>
+
+    <script>
+        async function init() {
+            // ⚠️ 等一下要把這裡換成真實的 LIFF ID
+            await liff.init({ liffId: "你的_LIFF_ID" }); 
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const qid = urlParams.get('qid') || '未知題號';
+            const exp = urlParams.get('exp') || '這題目前沒有詳解喔！';
+
+            document.getElementById('qIdTitle').innerText = '題號：' + qid;
+            document.getElementById('explanationText').innerText = exp;
+        }
+
+        function closeLiff() {
+            if (liff.isInClient()) {
+                liff.closeWindow(); 
+            } else {
+                window.close();     
+            }
+        }
+        init();
+    </script>
+</body>
+</html>
