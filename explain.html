@@ -8,7 +8,8 @@
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f6f8; color: #333; margin: 0; }
         .container { background: #fff; padding: 25px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { color: #8E24AA; margin-top: 0; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        h2 { color: #8E24AA; margin-top: 0; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; display: flex; align-items: center; }
+        h2::before { content: "📝"; margin-right: 8px; font-size: 22px; }
         p { font-size: 16px; line-height: 1.8; white-space: pre-wrap; color: #444; }
         .btn { display: block; width: 100%; padding: 14px; background-color: #1DB446; color: white; text-align: center; border-radius: 10px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(29, 180, 70, 0.3); }
         .btn:active { background-color: #179b3b; transform: scale(0.98); }
@@ -17,12 +18,12 @@
 <body>
     <div class="container">
         <h2 id="qIdTitle">載入中...</h2>
-        <p id="explanationText">正在讀取詳解內容，請稍候...</p>
+        <p id="explanationText">📡 正在連線資料庫，請稍候...</p>
     </div>
     <button class="btn" onclick="closeLiff()">✅ 了解！關閉視窗</button>
 
     <script>
-        // ⚠️⚠️⚠️ 麥哥請注意：請把下面這行引號內的網址，換成您剛剛在第一步複製的 GAS Web App URL
+        // ✅ 已經幫您把專屬的 GAS 網址填好填滿了！
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwpIc0jxfo4s7dggJ3iCPUcb89XYBI2QIB-GSHdXF0ZW7KQEbWMc3lLywdlNrrAY27pYg/exec";
 
         async function init() {
@@ -32,32 +33,34 @@
                 let searchParams = new URLSearchParams(window.location.search);
                 let qid = searchParams.get('qid');
 
-                // 解析 LINE LIFF 隱藏的參數
                 if (!qid && searchParams.get('liff.state')) {
                     let stateParams = new URLSearchParams(searchParams.get('liff.state'));
                     qid = stateParams.get('qid');
                 }
 
                 if (qid) {
-                    document.getElementById('qIdTitle').innerText = '📝 題號：' + qid;
+                    document.getElementById('qIdTitle').innerText = '題號：' + qid;
                     fetchExplanation(qid);
                 } else {
                     document.getElementById('qIdTitle').innerText = '⚠️ 錯誤';
                     document.getElementById('explanationText').innerText = '無法取得題號，請重新操作。';
                 }
             } catch (err) {
-                document.getElementById('explanationText').innerText = '系統初始化失敗：' + err.message;
+                document.getElementById('explanationText').innerText = 'LIFF 初始化失敗：' + err.message;
             }
         }
 
-        // 去 GAS 把詳解偷問回來！
         async function fetchExplanation(qid) {
             try {
                 let response = await fetch(GAS_API_URL + "?action=getExp&qid=" + qid);
+                
+                if (!response.ok) throw new Error('網路連線狀態碼異常：' + response.status);
+                
                 let data = await response.json();
                 document.getElementById('explanationText').innerText = data.exp;
             } catch (error) {
-                document.getElementById('explanationText').innerText = '讀取詳解失敗，請確認 GAS 網址是否正確。';
+                // 如果跑到這裡，99% 是 GAS 部署權限忘記開成「所有人」
+                document.getElementById('explanationText').innerText = '❌ 讀取失敗！\n如果一直看到這個畫面，請回到 GAS 編輯器重新部署，並確保「存取權限」設定為【所有人 (Anyone)】。\n\n系統錯誤碼：' + error.message;
             }
         }
 
