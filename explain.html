@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>題目詳解</title>
+    <title>麥克題庫系統</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f6f8; color: #333; margin: 0; }
@@ -18,49 +18,72 @@
 <body>
     <div class="container">
         <h2 id="qIdTitle">載入中...</h2>
-        <p id="explanationText">📡 正在連線資料庫，請稍候...</p>
+        <p id="explanationText">📡 系統處理中，請稍候...</p>
     </div>
-    <button class="btn" onclick="closeLiff()">✅ 了解！關閉視窗</button>
+    <button class="btn" id="closeBtn" onclick="closeLiff()" style="display:none;">✅ 了解！關閉視窗</button>
 
     <script>
-        // ✅ 已經幫您把專屬的 GAS 網址填好填滿了！
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwpIc0jxfo4s7dggJ3iCPUcb89XYBI2QIB-GSHdXF0ZW7KQEbWMc3lLywdlNrrAY27pYg/exec";
 
         async function init() {
+            let searchParams = new URLSearchParams(window.location.search);
+            let action = searchParams.get('action');
+            let qid = searchParams.get('qid');
+            let uid = searchParams.get('uid') || "";
+            let q = searchParams.get('q') || "";
+
+            // 解析 LINE LIFF 隱藏參數包
+            if (searchParams.get('liff.state')) {
+                let stateParams = new URLSearchParams(searchParams.get('liff.state'));
+                if(!action) action = stateParams.get('action');
+                if(!qid) qid = stateParams.get('qid');
+                if(!uid) uid = stateParams.get('uid') || uid;
+                if(!q) q = stateParams.get('q') || q;
+            }
+
+            // 🎯 狀況一：點擊 Google 按鈕 (利用 GitHub 轉跳避開 GAS 阻擋)
+            if (action === 'goGoogle') {
+                document.getElementById('qIdTitle').innerText = '🔍 正在前往 Google';
+                document.getElementById('explanationText').innerText = '正在記錄您的刷題足跡，馬上為您轉跳...';
+                
+                try {
+                    // 偷偷戳一下 GAS 寫入 Log (使用 no-cors 確保不被擋)
+                    await fetch(GAS_API_URL + "?action=logGoogle&uid=" + encodeURIComponent(uid) + "&q=" + encodeURIComponent(q), { mode: 'no-cors' });
+                } catch(e) {} 
+                
+                // 瞬間無感轉跳到 Google 搜尋結果
+                window.location.replace("https://www.google.com/search?q=" + encodeURIComponent(q));
+                return;
+            }
+
+            // 🎯 狀況二：點擊「看詳解」按鈕 (正常彈跳視窗)
+            document.getElementById('closeBtn').style.display = "block";
             try {
                 await liff.init({ liffId: "2009322405-8JEvb0DI" });
-
-                let searchParams = new URLSearchParams(window.location.search);
-                let qid = searchParams.get('qid');
-
-                if (!qid && searchParams.get('liff.state')) {
-                    let stateParams = new URLSearchParams(searchParams.get('liff.state'));
-                    qid = stateParams.get('qid');
-                }
-
                 if (qid) {
-                    document.getElementById('qIdTitle').innerText = '題號：' + qid;
-                    fetchExplanation(qid);
+                    document.getElementById('qIdTitle').innerText = '📝 題號：' + qid;
+                    fetchExplanation(qid, uid);
                 } else {
                     document.getElementById('qIdTitle').innerText = '⚠️ 錯誤';
                     document.getElementById('explanationText').innerText = '無法取得題號，請重新操作。';
                 }
             } catch (err) {
-                document.getElementById('explanationText').innerText = 'LIFF 初始化失敗：' + err.message;
+                document.getElementById('explanationText').innerText = '系統初始化失敗：' + err.message;
             }
         }
 
-        async function fetchExplanation(qid) {
+        async function fetchExplanation(qid, uid) {
             try {
-                let response = await fetch(GAS_API_URL + "?action=getExp&qid=" + qid);
-                
-                if (!response.ok) throw new Error('網路連線狀態碼異常：' + response.status);
+                let fetchUrl = GAS_API_URL + "?action=getExp&qid=" + encodeURIComponent(qid);
+                if (uid) fetchUrl += "&uid=" + encodeURIComponent(uid);
+
+                let response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error('網路異常');
                 
                 let data = await response.json();
                 document.getElementById('explanationText').innerText = data.exp;
             } catch (error) {
-                // 如果跑到這裡，99% 是 GAS 部署權限忘記開成「所有人」
-                document.getElementById('explanationText').innerText = '❌ 讀取失敗！\n如果一直看到這個畫面，請回到 GAS 編輯器重新部署，並確保「存取權限」設定為【所有人 (Anyone)】。\n\n系統錯誤碼：' + error.message;
+                document.getElementById('explanationText').innerText = '❌ 讀取失敗！系統錯誤碼：' + error.message;
             }
         }
 
