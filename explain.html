@@ -44,7 +44,7 @@
             // 🎯 狀況一：點擊 Google 按鈕 (利用 GitHub 轉跳避開 GAS 阻擋)
             if (action === 'goGoogle') {
                 document.getElementById('qIdTitle').innerText = '🔍 正在前往 Google';
-                document.getElementById('explanationText').innerText = '正在記錄您的刷題足跡，馬上為您轉跳...';
+                document.getElementById('explanationText').innerText = '查詢中，馬上為您轉跳...';
                 
                 try {
                     // 偷偷戳一下 GAS 寫入 Log (使用 no-cors 確保不被擋)
