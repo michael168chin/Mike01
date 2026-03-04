@@ -24,9 +24,10 @@
 
     <script>
         async function init() {
-            // ⚠️ 等一下要把這裡換成真實的 LIFF ID
-            await liff.init({ liffId: "你的_LIFF_ID" }); 
+            // 這裡已經換成您專屬的 LIFF ID
+            await liff.init({ liffId: "2009322405-8JEvb0DI" }); 
             
+            // 解析網址傳過來的參數
             const urlParams = new URLSearchParams(window.location.search);
             const qid = urlParams.get('qid') || '未知題號';
             const exp = urlParams.get('exp') || '這題目前沒有詳解喔！';
@@ -35,13 +36,15 @@
             document.getElementById('explanationText').innerText = exp;
         }
 
+        // 關閉視窗的函數
         function closeLiff() {
             if (liff.isInClient()) {
-                liff.closeWindow(); 
+                liff.closeWindow(); // 在 LINE 裡面，直接關閉半版視窗
             } else {
                 window.close();     
             }
         }
+        
         init();
     </script>
 </body>
