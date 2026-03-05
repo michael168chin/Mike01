@@ -49,14 +49,24 @@
         let uidContext = "";
 
         async function init() {
+            // ✅ 優先初始化 LIFF，確保後續操作(包含關閉視窗)能順利執行
+            try {
+                await liff.init({ liffId: "2009322405-8JEvb0DI" });
+            } catch (err) {
+                console.error("LIFF Init Error", err);
+            }
+
             let searchParams = new URLSearchParams(window.location.search);
             let action = searchParams.get('action');
             let qid = searchParams.get('qid');
             uidContext = searchParams.get('uid') || "";
             let q = searchParams.get('q') || "";
 
-            if (searchParams.get('liff.state')) {
-                let stateParams = new URLSearchParams(searchParams.get('liff.state'));
+            // ✅ 完美解析 LINE LIFF 隱藏參數包 (處理多餘的問號)
+            let liffState = searchParams.get('liff.state');
+            if (liffState) {
+                if(liffState.startsWith('?')) liffState = liffState.substring(1);
+                let stateParams = new URLSearchParams(liffState);
                 if(!action) action = stateParams.get('action');
                 if(!qid) qid = stateParams.get('qid');
                 if(!uidContext) uidContext = stateParams.get('uid') || uidContext;
@@ -66,7 +76,7 @@
             // 🎯 動作：Google轉跳
             if (action === 'goGoogle') {
                 document.getElementById('qIdTitle').innerText = '🔍 正在前往 Google';
-                document.getElementById('explanationText').innerText = '即將為您轉跳...';
+                document.getElementById('explanationText').innerText = '正在記錄您的刷題足跡，馬上為您轉跳...';
                 try { await fetch(GAS_API_URL + "?action=logGoogle&uid=" + encodeURIComponent(uidContext) + "&q=" + encodeURIComponent(q), { mode: 'no-cors' }); } catch(e) {} 
                 window.location.replace("https://www.google.com/search?q=" + encodeURIComponent(q));
                 return;
@@ -82,17 +92,12 @@
 
             // 🎯 動作：看詳解 (預設)
             document.getElementById('closeBtn').style.display = "block";
-            try {
-                await liff.init({ liffId: "2009322405-8JEvb0DI" });
-                if (qid) {
-                    document.getElementById('qIdTitle').innerText = '📝 題號：' + qid;
-                    fetchExplanation(qid, uidContext);
-                } else {
-                    document.getElementById('qIdTitle').innerText = '⚠️ 錯誤';
-                    document.getElementById('explanationText').innerText = '參數錯誤。';
-                }
-            } catch (err) {
-                document.getElementById('explanationText').innerText = '系統初始化失敗。';
+            if (qid) {
+                document.getElementById('qIdTitle').innerText = '📝 題號：' + qid;
+                fetchExplanation(qid, uidContext);
+            } else {
+                document.getElementById('qIdTitle').innerText = '⚠️ 錯誤';
+                document.getElementById('explanationText').innerText = '無法取得題號，請重新操作。';
             }
         }
 
@@ -151,7 +156,6 @@
             
             const targetIdx = wheelData.targetIndex;
             const sliceAngle = 360 / wheelData.prizes.length;
-            // 計算讓目標區塊正中央朝上(270度)的旋轉角度，並加上 8 圈的動畫
             const targetRotation = 360 * 8 + (270 - (targetIdx * sliceAngle + sliceAngle / 2));
             
             const canvas = document.getElementById('wheelCanvas');
@@ -174,7 +178,6 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     Swal.fire({ title: '處理中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-                    // 通知後台扣除票券並寫入紀錄
                     try {
                         await fetch(GAS_API_URL + "?action=claimWheel&uid=" + encodeURIComponent(uidContext) + "&prize=" + encodeURIComponent(prizeText));
                         Swal.fire('領取成功', '請向管理員出示畫面兌換！', 'success').then(()=> closeLiff());
