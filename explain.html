@@ -20,7 +20,7 @@
         .wheel-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto; }
         canvas { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
         .pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 40px; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .spin-btn { background-color: #FF5722; font-size: 20px; padding: 15px 40px; box-shadow: 0 4px 0 #D84315; margin-top: 30px;}
+        .spin-btn { background-color: #FF5722; color: #fff; font-size: 20px; padding: 15px 40px; box-shadow: 0 4px 0 #D84315; margin-top: 30px; border-radius: 25px; cursor: pointer; border: none;}
         .spin-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #D84315; }
     </style>
 </head>
@@ -36,7 +36,7 @@
             <div class="pointer">📍</div>
             <canvas id="wheelCanvas" width="400" height="400"></canvas>
         </div>
-        <button id="spinBtn" class="btn spin-btn" onclick="startSpin()">開始抽獎</button>
+        <button id="spinBtn" class="spin-btn" onclick="startSpin()">開始抽獎</button>
     </div>
 
     <button class="btn" id="closeBtn" onclick="closeLiff()" style="display:none; background-color:#757575;">關閉視窗</button>
@@ -48,32 +48,30 @@
         let isSpinning = false;
         let uidContext = "";
 
-        async function init() {
-            // ✅ 優先初始化 LIFF，確保後續操作(包含關閉視窗)能順利執行
-            try {
-                await liff.init({ liffId: "2009322405-8JEvb0DI" });
-            } catch (err) {
-                console.error("LIFF Init Error", err);
-            }
-
-            let searchParams = new URLSearchParams(window.location.search);
-            let action = searchParams.get('action');
-            let qid = searchParams.get('qid');
-            uidContext = searchParams.get('uid') || "";
-            let q = searchParams.get('q') || "";
-
-            // ✅ 完美解析 LINE LIFF 隱藏參數包 (處理多餘的問號)
-            let liffState = searchParams.get('liff.state');
+        // ✅ 強化的全能參數解析器 (再也不會因為 LINE 亂加問號而迷路)
+        function getParam(paramName) {
+            let url = new URL(window.location.href);
+            let val = url.searchParams.get(paramName);
+            if (val) return val;
+            
+            let liffState = url.searchParams.get('liff.state');
             if (liffState) {
-                if(liffState.startsWith('?')) liffState = liffState.substring(1);
+                if (liffState.startsWith('?')) liffState = liffState.substring(1);
                 let stateParams = new URLSearchParams(liffState);
-                if(!action) action = stateParams.get('action');
-                if(!qid) qid = stateParams.get('qid');
-                if(!uidContext) uidContext = stateParams.get('uid') || uidContext;
-                if(!q) q = stateParams.get('q') || q;
+                return stateParams.get(paramName);
             }
+            return null;
+        }
 
-            // 🎯 動作：Google轉跳
+        async function init() {
+            try { await liff.init({ liffId: "2009322405-8JEvb0DI" }); } catch (err) {}
+
+            let action = getParam('action');
+            let qid = getParam('qid');
+            uidContext = getParam('uid') || "";
+            let q = getParam('q') || "";
+
+            // 🎯 動作一：轉跳 Google
             if (action === 'goGoogle') {
                 document.getElementById('qIdTitle').innerText = '🔍 正在前往 Google';
                 document.getElementById('explanationText').innerText = '正在記錄您的刷題足跡，馬上為您轉跳...';
@@ -82,7 +80,7 @@
                 return;
             }
 
-            // 🎯 動作：幸運轉盤
+            // 🎯 動作二：幸運轉盤 (防迷路機制)
             if (action === 'wheel') {
                 document.getElementById('exp-container').style.display = "none";
                 document.getElementById('wheel-container').style.display = "block";
@@ -90,14 +88,14 @@
                 return;
             }
 
-            // 🎯 動作：看詳解 (預設)
+            // 🎯 動作三：看詳解 (預設)
             document.getElementById('closeBtn').style.display = "block";
             if (qid) {
                 document.getElementById('qIdTitle').innerText = '📝 題號：' + qid;
                 fetchExplanation(qid, uidContext);
             } else {
                 document.getElementById('qIdTitle').innerText = '⚠️ 錯誤';
-                document.getElementById('explanationText').innerText = '無法取得題號，請重新操作。';
+                document.getElementById('explanationText').innerText = '無法取得參數，請重新操作。';
             }
         }
 
