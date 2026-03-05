@@ -71,8 +71,7 @@
 
             // 🎯 動作：Google轉跳 (✅ 已刪除轉跳文字)
             if (action === 'goGoogle') {
-                document.getElementById('qIdTitle').innerText = '🔍 正在前往 Google';
-                document.getElementById('explanationText').innerText = ''; 
+                document.getElementById('exp-container').style.display = "none"; // 徹底隱藏畫面
                 try { await fetch(GAS_API_URL + "?action=logGoogle&uid=" + encodeURIComponent(uidContext) + "&q=" + encodeURIComponent(q), { mode: 'no-cors' }); } catch(e) {} 
                 window.location.replace("https://www.google.com/search?q=" + encodeURIComponent(q));
                 return;
@@ -135,7 +134,7 @@
             if(isSpinning || !wheelData || !wheelData.canPlay) return;
             isSpinning = true;
             
-            Swal.fire({ title: '準備開獎...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            Swal.fire({ title: '祈求好運中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
             let spinRes;
             try {
                 let req = await fetch(GAS_API_URL + "?action=doSpin&uid=" + encodeURIComponent(uidContext));
