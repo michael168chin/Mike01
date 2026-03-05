@@ -12,7 +12,8 @@
         h2 { color: #8E24AA; margin-top: 0; font-size: 18px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; display: flex; align-items: center; }
         h2::before { content: "📝"; margin-right: 8px; font-size: 22px; }
         p { font-size: 16px; line-height: 1.8; white-space: pre-wrap; color: #444; }
-        .btn { display: block; width: 100%; padding: 14px; background-color: #1DB446; color: white; text-align: center; border-radius: 10px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; margin-top: 15px; }
+        .btn { display: block; width: 100%; padding: 14px; color: white; text-align: center; border-radius: 10px; font-weight: bold; font-size: 16px; border: none; cursor: pointer; margin-top: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn:active { transform: scale(0.98); }
         
         /* 轉盤專屬樣式 */
         #wheel-container { display: none; text-align: center; }
@@ -20,7 +21,7 @@
         .wheel-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto; }
         canvas { width: 100%; height: 100%; border-radius: 50%; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
         .pointer { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); font-size: 40px; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .spin-btn { background-color: #FF5722; color: #fff; font-size: 20px; padding: 15px 40px; box-shadow: 0 4px 0 #D84315; margin-top: 30px; border-radius: 25px; cursor: pointer; border: none;}
+        .spin-btn { background-color: #FF5722; color: #fff; font-size: 20px; padding: 15px 40px; box-shadow: 0 4px 0 #D84315; margin-top: 30px; border-radius: 25px; cursor: pointer; border: none; font-weight: bold;}
         .spin-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #D84315; }
     </style>
 </head>
@@ -39,7 +40,7 @@
         <button id="spinBtn" class="spin-btn" onclick="startSpin()">開始抽獎</button>
     </div>
 
-    <button class="btn" id="closeBtn" onclick="closeLiff()" style="display:none; background-color:#757575;">關閉視窗</button>
+    <button class="btn" id="closeBtn" onclick="closeLiff()" style="display:none; background-color:#FF9800;">✅ 了解！關閉視窗</button>
 
     <script>
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwpIc0jxfo4s7dggJ3iCPUcb89XYBI2QIB-GSHdXF0ZW7KQEbWMc3lLywdlNrrAY27pYg/exec";
@@ -48,17 +49,14 @@
         let isSpinning = false;
         let uidContext = "";
 
-        // ✅ 強化的全能參數解析器 (再也不會因為 LINE 亂加問號而迷路)
         function getParam(paramName) {
             let url = new URL(window.location.href);
             let val = url.searchParams.get(paramName);
             if (val) return val;
-            
             let liffState = url.searchParams.get('liff.state');
             if (liffState) {
                 if (liffState.startsWith('?')) liffState = liffState.substring(1);
-                let stateParams = new URLSearchParams(liffState);
-                return stateParams.get(paramName);
+                return new URLSearchParams(liffState).get(paramName);
             }
             return null;
         }
@@ -71,16 +69,15 @@
             uidContext = getParam('uid') || "";
             let q = getParam('q') || "";
 
-            // 🎯 動作一：轉跳 Google
+            // 🎯 動作：Google轉跳 (✅ 已刪除轉跳文字)
             if (action === 'goGoogle') {
                 document.getElementById('qIdTitle').innerText = '🔍 正在前往 Google';
-                document.getElementById('explanationText').innerText = '正在記錄您的刷題足跡，馬上為您轉跳...';
+                document.getElementById('explanationText').innerText = ''; 
                 try { await fetch(GAS_API_URL + "?action=logGoogle&uid=" + encodeURIComponent(uidContext) + "&q=" + encodeURIComponent(q), { mode: 'no-cors' }); } catch(e) {} 
                 window.location.replace("https://www.google.com/search?q=" + encodeURIComponent(q));
                 return;
             }
 
-            // 🎯 動作二：幸運轉盤 (防迷路機制)
             if (action === 'wheel') {
                 document.getElementById('exp-container').style.display = "none";
                 document.getElementById('wheel-container').style.display = "block";
@@ -88,7 +85,6 @@
                 return;
             }
 
-            // 🎯 動作三：看詳解 (預設)
             document.getElementById('closeBtn').style.display = "block";
             if (qid) {
                 document.getElementById('qIdTitle').innerText = '📝 題號：' + qid;
@@ -99,11 +95,12 @@
             }
         }
 
-        // ================= 轉盤遊戲核心邏輯 =================
+        // ================= 防作弊轉盤邏輯 =================
         async function fetchWheelConfig(uid) {
             Swal.fire({ title: '載入中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
             try {
-                let res = await fetch(GAS_API_URL + "?action=getWheelConfig&uid=" + encodeURIComponent(uid));
+                // 這裡只 "檢查" 資格，不扣票券
+                let res = await fetch(GAS_API_URL + "?action=checkTicket&uid=" + encodeURIComponent(uid));
                 wheelData = await res.json();
                 Swal.close();
                 
@@ -114,45 +111,46 @@
                 } else {
                     drawWheel(wheelData.prizes);
                 }
-            } catch(e) {
-                Swal.fire('連線失敗', '無法讀取獎品設定', 'error');
-            }
+            } catch(e) { Swal.fire('連線失敗', '無法讀取獎品設定', 'error'); }
         }
 
         function drawWheel(prizes) {
             const canvas = document.getElementById('wheelCanvas');
             const ctx = canvas.getContext('2d');
-            const num = prizes.length;
-            const arc = Math.PI * 2 / num;
+            const num = prizes.length, arc = Math.PI * 2 / num;
             const colors = ['#FFCDD2', '#C8E6C9', '#BBDEFB', '#FFF9C4', '#FFE082', '#E1BEE7', '#F8BBD0', '#D7CCC8'];
-            
             ctx.clearRect(0, 0, 400, 400);
             for(let i=0; i<num; i++) {
-                ctx.beginPath();
-                ctx.fillStyle = colors[i % colors.length];
-                ctx.moveTo(200, 200);
-                ctx.arc(200, 200, 200, i*arc, (i+1)*arc);
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = "#fff";
-                ctx.stroke();
-
-                ctx.save();
-                ctx.translate(200, 200);
-                ctx.rotate(i*arc + arc/2);
-                ctx.textAlign = "right";
-                ctx.fillStyle = "#333";
-                ctx.font = "bold 22px 'Helvetica Neue', sans-serif";
-                ctx.fillText(prizes[i], 170, 8);
-                ctx.restore();
+                ctx.beginPath(); ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(200, 200); ctx.arc(200, 200, 200, i*arc, (i+1)*arc); ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
+                ctx.save(); ctx.translate(200, 200); ctx.rotate(i*arc + arc/2);
+                ctx.textAlign = "right"; ctx.fillStyle = "#333"; ctx.font = "bold 22px 'Helvetica Neue', sans-serif";
+                ctx.fillText(prizes[i], 170, 8); ctx.restore();
             }
         }
 
-        function startSpin() {
+        // ✅ 防作弊核心：按下開始時，先呼叫後台扣券並取得結果
+        async function startSpin() {
             if(isSpinning || !wheelData || !wheelData.canPlay) return;
             isSpinning = true;
             
-            const targetIdx = wheelData.targetIndex;
+            Swal.fire({ title: '準備開獎...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            let spinRes;
+            try {
+                let req = await fetch(GAS_API_URL + "?action=doSpin&uid=" + encodeURIComponent(uidContext));
+                spinRes = await req.json();
+                if(spinRes.status === "error") {
+                    Swal.fire('錯誤', spinRes.msg, 'error').then(()=>closeLiff());
+                    return;
+                }
+            } catch(e) {
+                Swal.fire('網路錯誤', '請稍後再試', 'error');
+                isSpinning = false; return;
+            }
+            Swal.close();
+            
+            const targetIdx = spinRes.targetIndex;
             const sliceAngle = 360 / wheelData.prizes.length;
             const targetRotation = 360 * 8 + (270 - (targetIdx * sliceAngle + sliceAngle / 2));
             
@@ -161,45 +159,31 @@
             canvas.style.transform = `rotate(${targetRotation}deg)`;
             
             setTimeout(() => {
-                showResult(wheelData.prizes[targetIdx]);
+                showResult(spinRes.prize, spinRes.isTest);
             }, 4100);
         }
 
-        async function showResult(prizeText) {
+        function showResult(prizeText, isTest) {
+            let msg = isTest ? "這是測試模式，未扣除真實票券。" : "獎品已自動存入您的背包！<br><br>請於對話框輸入【Q】查看未領取獎品，並向管理員出示掃碼核銷。";
             Swal.fire({
                 title: '🎉 恭喜中獎！',
-                text: `您抽中了：【 ${prizeText} 】`,
+                html: `您抽中了：<b>【 ${prizeText} 】</b><br><br>${msg}`,
                 icon: 'success',
-                confirmButtonText: '收下獎品',
+                confirmButtonText: '✅ 確定',
                 confirmButtonColor: '#1DB446',
                 allowOutsideClick: false
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({ title: '處理中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-                    try {
-                        await fetch(GAS_API_URL + "?action=claimWheel&uid=" + encodeURIComponent(uidContext) + "&prize=" + encodeURIComponent(prizeText));
-                        Swal.fire('領取成功', '請向管理員出示畫面兌換！', 'success').then(()=> closeLiff());
-                    } catch(e) {
-                        Swal.fire('發生錯誤', '請截圖通知管理員。', 'error');
-                    }
-                }
-            });
+            }).then(() => { closeLiff(); });
         }
 
-        // ================= 一般功能 =================
         async function fetchExplanation(qid, uid) {
             try {
-                let fetchUrl = GAS_API_URL + "?action=getExp&qid=" + encodeURIComponent(qid);
-                if (uid) fetchUrl += "&uid=" + encodeURIComponent(uid);
-                let response = await fetch(fetchUrl);
-                let data = await response.json();
+                let res = await fetch(GAS_API_URL + "?action=getExp&qid=" + encodeURIComponent(qid) + "&uid=" + encodeURIComponent(uid));
+                let data = await res.json();
                 document.getElementById('explanationText').innerText = data.exp;
             } catch (error) { document.getElementById('explanationText').innerText = '❌ 讀取失敗。'; }
         }
 
-        function closeLiff() {
-            try{ if(liff.isInClient()){ liff.closeWindow(); }else{ window.close(); } } catch(e){}
-        }
+        function closeLiff() { try{ if(liff.isInClient()){ liff.closeWindow(); }else{ window.close(); } } catch(e){} }
 
         init();
     </script>
