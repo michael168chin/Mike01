@@ -215,8 +215,8 @@
                 ctx.font = "bold 20px 'Helvetica Neue', sans-serif";
                 
                 let text = prizes[i];
-                // 超過 6 個字才拆成兩行
-                if (text.length > 6) {
+                // 超過 5 個字才拆成兩行
+                if (text.length > 5) {
                     let mid = Math.ceil(text.length / 2);
                     let line1 = text.substring(0, mid);
                     let line2 = text.substring(mid);
