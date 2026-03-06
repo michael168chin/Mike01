@@ -22,42 +22,43 @@
         #wheel-container { display: none; text-align: center; margin-top: 10px; }
         .wheel-title { color: #D84315; font-size: 26px; font-weight: bold; margin-bottom: 30px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
         .wheel-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto; }
+        
         canvas { width: 100%; height: 100%; border-radius: 50%; } 
         
-        /* 圓心 GO 與 指針容器 (給定明確尺寸) */
+        /* 圓心指針與GO容器 (確保無縫相接) */
         .center-anchor {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 70px;
-            height: 70px;
             transform: translate(-50%, -50%);
             z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* 向上指針 (完美貼合圓形) */
+        /* 朝上的正三角形指針 */
         .needle {
-            position: absolute;
-            bottom: 100%; /* 從圓形的正上方開始往上長 */
-            left: 50%;
-            transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 30px solid #000;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 26px solid #000; /* 黑指針 */
+            margin-bottom: -1px; /* 往下推，與下方的白色圓框無縫相接 */
             z-index: 11;
-            margin-bottom: -5px; /* 往下吃進去 5px，蓋過白框，與黑色圓心完美連接 */
+            filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.3));
         }
 
-        /* 圓心 GO 按鈕 */
+        /* 圓心 GO 按鈕 (黑底白字+白圈) */
         .center-go {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #000;
+            position: relative;
+            width: 65px;
+            height: 65px;
+            background-color: #000; /* 黑底 */
             border: 4px solid #fff; /* 白圈 */
             border-radius: 50%;
-            color: #fff;
+            color: #fff; /* 白字 */
             font-size: 24px;
             font-weight: bold;
             display: flex;
@@ -67,7 +68,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             user-select: none;
             z-index: 12;
-            box-sizing: border-box;
         }
         .center-go:active { transform: scale(0.92); }
 
@@ -102,9 +102,9 @@
         let wheelData = null;
         let uidContext = "";
 
-        // 物理引擎變數
+        // 物理引擎變數 (初始-15度)
         let wheelState = 'IDLE'; 
-        let currentAngle = 0;
+        let currentAngle = -15; 
         let spinSpeed = 0;
         let targetIndex = -1;
         let prizeName = "";
@@ -112,7 +112,7 @@
         let finalTargetAngle = 0;
         let targetAnimStartAngle = 0;
         let targetAnimStartTime = 0;
-        const TARGET_ANIM_DURATION = 4000; 
+        const TARGET_ANIM_DURATION = 4000;
 
         function getParam(paramName) {
             let url = new URL(window.location.href);
@@ -144,6 +144,10 @@
             if (action === 'wheel') {
                 document.getElementById('exp-container').style.display = "none";
                 document.getElementById('wheel-container').style.display = "block";
+                
+                // 設定畫布初始逆時針 15 度
+                document.getElementById('wheelCanvas').style.transform = `rotate(${currentAngle}deg)`;
+                
                 fetchWheelConfig(uidContext);
                 return;
             }
@@ -183,13 +187,13 @@
             const colors = ['#FFCDD2', '#C8E6C9', '#BBDEFB', '#FFF9C4', '#FFE082', '#E1BEE7', '#F8BBD0', '#D7CCC8'];
             ctx.clearRect(0, 0, 400, 400);
 
-            // 畫底層黑圈
+            // 底層黑圈
             ctx.beginPath();
             ctx.arc(200, 200, 195, 0, Math.PI * 2);
             ctx.fillStyle = "#000";
             ctx.fill();
 
-            // 畫各個獎品扇形
+            // 扇形繪製
             for(let i=0; i<num; i++) {
                 ctx.beginPath(); 
                 ctx.fillStyle = colors[i % colors.length];
@@ -197,21 +201,34 @@
                 ctx.arc(200, 200, 190, i*arc, (i+1)*arc); 
                 ctx.fill();
                 
+                // 粗黑分隔線
                 ctx.lineWidth = 4; 
                 ctx.strokeStyle = "#000"; 
                 ctx.stroke();
                 
+                // 文字推向外側 (185px)
                 ctx.save(); 
                 ctx.translate(200, 200); 
                 ctx.rotate(i*arc + arc/2);
                 ctx.textAlign = "right"; 
-                ctx.fillStyle = "#000"; 
-                ctx.font = "bold 24px 'Helvetica Neue', sans-serif";
-                ctx.fillText(prizes[i], 165, 8); 
+                ctx.fillStyle = "#000";
+                ctx.font = "bold 20px 'Helvetica Neue', sans-serif";
+                
+                let text = prizes[i];
+                if (text.length > 5) {
+                    // 超過5個字，自動拆成兩行
+                    let mid = Math.ceil(text.length / 2);
+                    let line1 = text.substring(0, mid);
+                    let line2 = text.substring(mid);
+                    ctx.fillText(line1, 185, -10);
+                    ctx.fillText(line2, 185, 14);
+                } else {
+                    ctx.fillText(text, 185, 6); 
+                }
                 ctx.restore();
             }
 
-            // 畫最外層厚實黑框
+            // 外層厚實黑框
             ctx.beginPath();
             ctx.arc(200, 200, 192, 0, Math.PI * 2);
             ctx.lineWidth = 10;
