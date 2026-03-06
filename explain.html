@@ -25,34 +25,22 @@
         
         canvas { width: 100%; height: 100%; border-radius: 50%; } 
         
-        /* 圓心指針與GO容器 (確保無縫相接) */
+        /* 圓心座標原點 (設定在300x300的絕對正中央) */
         .center-anchor {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* 朝上的正三角形指針 */
-        .needle {
             width: 0;
             height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-bottom: 26px solid #000; /* 黑指針 */
-            margin-bottom: -1px; /* 往下推，與下方的白色圓框無縫相接 */
-            z-index: 11;
-            filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.3));
+            z-index: 10;
         }
 
-        /* 圓心 GO 按鈕 (黑底白字+白圈) */
+        /* 圓心 GO 按鈕 (絕對完美置中) */
         .center-go {
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%); /* 將自己的中心點對齊座標原點 */
             width: 65px;
             height: 65px;
             background-color: #000; /* 黑底 */
@@ -69,7 +57,23 @@
             user-select: none;
             z-index: 12;
         }
-        .center-go:active { transform: scale(0.92); }
+        
+        /* 點擊縮放時也要保持置中 */
+        .center-go:active { transform: translate(-50%, -50%) scale(0.92); }
+
+        /* 朝上的正三角形指針 */
+        .needle {
+            position: absolute;
+            bottom: 34px; /* 半徑大約36px，設定34px讓底部稍微吃合進去，達到無縫相接 */
+            left: -12px;  /* 寬度的一半，讓它水平置中 */
+            width: 0;
+            height: 0;
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 26px solid #000; /* 黑指針 */
+            z-index: 11;
+            filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.3));
+        }
 
         /* 下方加速按鈕 */
         .spin-btn { background-color: #FF5722; color: #fff; font-size: 20px; padding: 15px 40px; box-shadow: 0 5px 0 #D84315; margin-top: 40px; border-radius: 25px; cursor: pointer; border: none; font-weight: bold; width: 80%; transition: background-color 0.3s;}
@@ -86,10 +90,12 @@
         <div class="wheel-title">🎰 幸運大轉盤</div>
         <div class="wheel-wrapper">
             <canvas id="wheelCanvas" width="400" height="400"></canvas>
+            
             <div class="center-anchor">
                 <div class="needle"></div>
                 <div class="center-go" onclick="handleSpinClick()" id="goBtn">GO</div>
             </div>
+            
         </div>
         <button id="spinBtn" class="spin-btn" onclick="handleSpinClick()">開始抽獎</button>
     </div>
@@ -206,7 +212,7 @@
                 ctx.strokeStyle = "#000"; 
                 ctx.stroke();
                 
-                // 文字推向外側，並保留半格小空白 (x從185改為175)
+                // 文字推向外側 (175px)，保留半格空白
                 ctx.save(); 
                 ctx.translate(200, 200); 
                 ctx.rotate(i*arc + arc/2);
