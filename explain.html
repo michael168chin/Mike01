@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>麥克1號刷題系統</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -19,39 +22,38 @@
         #wheel-container { display: none; text-align: center; margin-top: 10px; }
         .wheel-title { color: #D84315; font-size: 26px; font-weight: bold; margin-bottom: 30px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
         .wheel-wrapper { position: relative; width: 300px; height: 300px; margin: 0 auto; }
-        
-        /* 畫布本身不帶陰影，由程式繪製厚實黑邊 */
         canvas { width: 100%; height: 100%; border-radius: 50%; } 
         
-        /* 圓心 GO 與 指針容器 */
+        /* 圓心 GO 與 指針容器 (給定明確尺寸) */
         .center-anchor {
             position: absolute;
             top: 50%;
             left: 50%;
+            width: 70px;
+            height: 70px;
             transform: translate(-50%, -50%);
             z-index: 10;
         }
 
-        /* 朝上的黑色指針 */
+        /* 向上指針 (完美貼合圓形) */
         .needle {
             position: absolute;
-            top: -40px; 
+            bottom: 100%; /* 從圓形的正上方開始往上長 */
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-bottom: 28px solid #000;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 30px solid #000;
             z-index: 11;
-            filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.3));
+            margin-bottom: -5px; /* 往下吃進去 5px，蓋過白框，與黑色圓心完美連接 */
         }
 
-        /* 圓心 GO 按鈕 (黑底白字+白圈) */
+        /* 圓心 GO 按鈕 */
         .center-go {
-            position: relative;
-            width: 65px;
-            height: 65px;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             background-color: #000;
             border: 4px solid #fff; /* 白圈 */
             border-radius: 50%;
@@ -65,6 +67,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             user-select: none;
             z-index: 12;
+            box-sizing: border-box;
         }
         .center-go:active { transform: scale(0.92); }
 
@@ -83,7 +86,6 @@
         <div class="wheel-title">🎰 幸運大轉盤</div>
         <div class="wheel-wrapper">
             <canvas id="wheelCanvas" width="400" height="400"></canvas>
-            
             <div class="center-anchor">
                 <div class="needle"></div>
                 <div class="center-go" onclick="handleSpinClick()" id="goBtn">GO</div>
@@ -101,7 +103,7 @@
         let uidContext = "";
 
         // 物理引擎變數
-        let wheelState = 'IDLE'; // IDLE, WAITING_API, SPINNING, TARGETING, DONE
+        let wheelState = 'IDLE'; 
         let currentAngle = 0;
         let spinSpeed = 0;
         let targetIndex = -1;
@@ -110,7 +112,7 @@
         let finalTargetAngle = 0;
         let targetAnimStartAngle = 0;
         let targetAnimStartTime = 0;
-        const TARGET_ANIM_DURATION = 4000; // 減速定位耗時 (毫秒)
+        const TARGET_ANIM_DURATION = 4000; 
 
         function getParam(paramName) {
             let url = new URL(window.location.href);
@@ -156,7 +158,6 @@
             }
         }
 
-        // ================= 繪製重裝甲轉盤 =================
         async function fetchWheelConfig(uid) {
             Swal.fire({ title: '載入中...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
             try {
@@ -182,13 +183,13 @@
             const colors = ['#FFCDD2', '#C8E6C9', '#BBDEFB', '#FFF9C4', '#FFE082', '#E1BEE7', '#F8BBD0', '#D7CCC8'];
             ctx.clearRect(0, 0, 400, 400);
 
-            // 畫底層黑圈 (讓線條與外框完美銜接)
+            // 畫底層黑圈
             ctx.beginPath();
             ctx.arc(200, 200, 195, 0, Math.PI * 2);
             ctx.fillStyle = "#000";
             ctx.fill();
 
-            // 畫各個獎品扇形 (留一點邊距露出底層黑框)
+            // 畫各個獎品扇形
             for(let i=0; i<num; i++) {
                 ctx.beginPath(); 
                 ctx.fillStyle = colors[i % colors.length];
@@ -196,23 +197,21 @@
                 ctx.arc(200, 200, 190, i*arc, (i+1)*arc); 
                 ctx.fill();
                 
-                // 粗黑分隔線
                 ctx.lineWidth = 4; 
                 ctx.strokeStyle = "#000"; 
                 ctx.stroke();
                 
-                // 獎品文字
                 ctx.save(); 
                 ctx.translate(200, 200); 
                 ctx.rotate(i*arc + arc/2);
                 ctx.textAlign = "right"; 
-                ctx.fillStyle = "#000"; // 黑色文字
+                ctx.fillStyle = "#000"; 
                 ctx.font = "bold 24px 'Helvetica Neue', sans-serif";
                 ctx.fillText(prizes[i], 165, 8); 
                 ctx.restore();
             }
 
-            // 畫最外層的厚實黑框
+            // 畫最外層厚實黑框
             ctx.beginPath();
             ctx.arc(200, 200, 192, 0, Math.PI * 2);
             ctx.lineWidth = 10;
@@ -220,24 +219,20 @@
             ctx.stroke();
         }
 
-        // ================= 沉浸式物理加速引擎 =================
         async function handleSpinClick() {
             if (wheelState === 'DONE' || wheelState === 'TARGETING') return;
 
             if (wheelState === 'IDLE') {
                 if (!wheelData || !wheelData.canPlay) return;
                 
-                // 第一次點擊：啟動引擎
                 wheelState = 'WAITING_API';
-                spinSpeed = 15; // 初始動力
+                spinSpeed = 15; 
                 
-                // 更改按鈕提示，引導使用者連按
                 document.getElementById('spinBtn').innerText = "🔥 點擊加速！🔥";
                 document.getElementById('spinBtn').style.backgroundColor = "#E64A19";
                 
                 requestAnimationFrame(spinLoop);
 
-                // 背景向後台抽獎 (先扣防作弊)
                 try {
                     let req = await fetch(GAS_API_URL + "?action=doSpin&uid=" + encodeURIComponent(uidContext));
                     let res = await req.json();
@@ -249,15 +244,14 @@
                     targetIndex = res.targetIndex;
                     prizeName = res.prize;
                     isTestMode = res.isTest;
-                    wheelState = 'SPINNING'; // 取得目標，進入可鎖定狀態
+                    wheelState = 'SPINNING'; 
                 } catch (e) {
                     Swal.fire('網路錯誤', '請稍後再試', 'error');
                     wheelState = 'DONE';
                 }
             } else if (wheelState === 'WAITING_API' || wheelState === 'SPINNING') {
-                // 連續點擊：加速轉盤
                 spinSpeed += 8;
-                if (spinSpeed > 40) spinSpeed = 40; // 最高速限防眼花
+                if (spinSpeed > 40) spinSpeed = 40; 
             }
         }
 
@@ -267,30 +261,23 @@
             const canvas = document.getElementById('wheelCanvas');
 
             if (wheelState === 'WAITING_API' || wheelState === 'SPINNING') {
-                // 1. 套用速度
                 currentAngle += spinSpeed;
-                // 2. 摩擦力減速 (沒按就會慢慢慢下來)
                 spinSpeed *= 0.985; 
 
-                // 3. 如果後台已回傳結果，且速度低於臨界點 -> 系統接管，準備停在目標
                 if (wheelState === 'SPINNING' && spinSpeed < 2.5) {
                     wheelState = 'TARGETING';
                     targetAnimStartAngle = currentAngle;
                     targetAnimStartTime = timestamp;
 
-                    // 計算目標角度 (指針在正上方 270度)
                     const sliceAngle = 360 / wheelData.prizes.length;
                     let baseTarget = 270 - (targetIndex * sliceAngle + sliceAngle / 2);
                     
-                    // 算出目前角度與目標的距離
                     let normCurrent = currentAngle % 360;
                     let distance = (baseTarget - normCurrent) % 360;
                     if (distance <= 0) distance += 360;
                     
-                    // 多轉 1 圈讓減速更自然
                     finalTargetAngle = currentAngle + distance + 360 * 1; 
                     
-                    // 鎖定按鈕，防止干擾開獎
                     document.getElementById('spinBtn').innerText = "開獎中...";
                     document.getElementById('spinBtn').style.backgroundColor = "#9E9E9E";
                     document.getElementById('spinBtn').style.boxShadow = "0 4px 0 #757575";
@@ -302,11 +289,10 @@
                 requestAnimationFrame(spinLoop);
             } 
             else if (wheelState === 'TARGETING') {
-                // 系統接管：平滑減速至目標點 (EaseOutCubic)
                 let progress = (timestamp - targetAnimStartTime) / TARGET_ANIM_DURATION;
                 if (progress > 1) progress = 1;
                 
-                let easeOut = 1 - Math.pow(1 - progress, 4); // 4次方減速，非常平滑
+                let easeOut = 1 - Math.pow(1 - progress, 4); 
                 currentAngle = targetAnimStartAngle + (finalTargetAngle - targetAnimStartAngle) * easeOut;
                 
                 canvas.style.transform = `rotate(${currentAngle}deg)`;
@@ -315,7 +301,7 @@
                     requestAnimationFrame(spinLoop);
                 } else {
                     wheelState = 'DONE';
-                    setTimeout(() => showResult(prizeName, isTestMode), 500); // 停穩後 0.5秒彈出結果
+                    setTimeout(() => showResult(prizeName, isTestMode), 500); 
                 }
             }
         }
