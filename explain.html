@@ -102,7 +102,7 @@
         let wheelData = null;
         let uidContext = "";
 
-        // 物理引擎變數 (初始-15度)
+        // 物理引擎變數 (初始歸零，端正對齊)
         let wheelState = 'IDLE'; 
         let currentAngle = 0; 
         let spinSpeed = 0;
@@ -145,7 +145,7 @@
                 document.getElementById('exp-container').style.display = "none";
                 document.getElementById('wheel-container').style.display = "block";
                 
-                // 設定畫布初始逆時針 15 度
+                // 設定畫布初始角度 (0度)
                 document.getElementById('wheelCanvas').style.transform = `rotate(${currentAngle}deg)`;
                 
                 fetchWheelConfig(uidContext);
