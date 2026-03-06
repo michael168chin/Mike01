@@ -206,7 +206,7 @@
                 ctx.strokeStyle = "#000"; 
                 ctx.stroke();
                 
-                // 文字推向外側 (185px)
+                // 文字推向外側，並保留半格小空白 (x從185改為175)
                 ctx.save(); 
                 ctx.translate(200, 200); 
                 ctx.rotate(i*arc + arc/2);
@@ -215,15 +215,15 @@
                 ctx.font = "bold 20px 'Helvetica Neue', sans-serif";
                 
                 let text = prizes[i];
-                if (text.length > 5) {
-                    // 超過5個字，自動拆成兩行
+                // 超過 6 個字才拆成兩行
+                if (text.length > 6) {
                     let mid = Math.ceil(text.length / 2);
                     let line1 = text.substring(0, mid);
                     let line2 = text.substring(mid);
-                    ctx.fillText(line1, 185, -10);
-                    ctx.fillText(line2, 185, 14);
+                    ctx.fillText(line1, 175, -12); // 微調Y軸讓兩行更置中
+                    ctx.fillText(line2, 175, 12);
                 } else {
-                    ctx.fillText(text, 185, 6); 
+                    ctx.fillText(text, 175, 6); 
                 }
                 ctx.restore();
             }
